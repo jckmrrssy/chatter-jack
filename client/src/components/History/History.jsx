@@ -1,11 +1,10 @@
 import React from "react"
 import "./History.scss"
+import Message from '../Message'
 
-const History = props => {
+const History = ({ chatHistory }) => {
 
-  const messages = props.chatHistory?.map(msg => (
-    <p key={msg.timeStamp}>{msg.data}</p>
-  ))
+  const messages = chatHistory?.map(chat => <Message key={chat.timeStamp} message={chat.data} />)
 
   return (
   <div className="History">

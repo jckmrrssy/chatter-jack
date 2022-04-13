@@ -2,72 +2,52 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
+	"os"
 
-	"github.com/gorilla/websocket"
+	"github.com/gin-gonic/gin"
+	"github.com/jckmrrssy/chatter-jack/pkg/websocket"
 )
 
-// We'll need to define an Upgrader
-// this will require a Read and Write buffer size
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-
-	// We'll need to check the origin of our connection
-	// this will allow us to make requests from our React
-	// development server to here.
-	// For now, we'll do no checking and just allow any connection
-	CheckOrigin: func(r *http.Request) bool { return true },
-}
-
-// define a reader which will listen for
-// new messages being sent to our WebSocket
-// endpoint
-func reader(conn *websocket.Conn) {
-	for {
-		// read in a message
-		messageType, p, err := conn.ReadMessage()
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		// print out that message for clarity
-		fmt.Println(string(p))
-
-		if err := conn.WriteMessage(messageType, p); err != nil {
-			log.Println(err)
-			return
-		}
-
-	}
-}
-
-// define our WebSocket endpoint
-func serveWs(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.Host)
-
-	// upgrade this connection to a WebSocket
-	// connection
-	ws, err := upgrader.Upgrade(w, r, nil)
+func serveWs(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
+	fmt.Println("WebSocket Endpoint Hit")
+	conn, err := websocket.Upgrade(w, r)
 	if err != nil {
-		log.Println(err)
+		fmt.Fprintf(w, "%+v\n", err)
 	}
-	// listen indefinitely for new messages coming
-	// through on our WebSocket connection
-	reader(ws)
+
+	client := &websocket.Client{
+		Conn: conn,
+		Pool: pool,
+	}
+
+	pool.Register <- client
+	client.Read()
 }
 
-func routesInit() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "chatterJack ")
+func setupRoutes() {
+	pool := websocket.NewPool()
+	go pool.Start()
+
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		serveWs(pool, w, r)
 	})
-	// mape our `/ws` endpoint to the `serveWs` function
-	http.HandleFunc("/ws", serveWs)
 }
 
 func main() {
-	fmt.Println("Sup, welcome to Chatter Jack")
-	routesInit()
+	fmt.Println("Distributed Chat App v0.01")
+	router := gin.Default()
+	// server := implement ORM controller server here, in place of taskstore https://github.com/eliben/code-for-blog/blob/master/2021/go-rest-servers/gin/gorest-gin.go
+
+	router.GET("/rooms", server.getAllRooms)
+	router.GET("/rooms/:id", server.getRoom)
+	router.POST("/rooms/:id", server.createRoom)
+	// GET AUTH
+	// POST AUTH
+	router.POST("/user/:id", server.createUser)
+	router.DELETE("/user/:id", server.deleteUser)
+	router.PUT("/user/:id", server.updateUser)
+	setupRoutes()
 	http.ListenAndServe(":8080", nil)
+	router.Run("localhost:" + os.Getenv("SERVERPORT"))
 }

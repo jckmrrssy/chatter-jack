@@ -1,6 +1,6 @@
 const socket = new WebSocket("ws://localhost:8080/ws")
 
-const connect = receive => {
+const connect = async receive => {
   console.log("Attempting Connection...")
 
   socket.onopen = () => {
@@ -21,7 +21,7 @@ const connect = receive => {
   }
 }
 
-const sendMessage = msg => {
+const sendMessage = async msg => {
   console.log("sending msg: ", msg)
   socket.send(msg)
 }

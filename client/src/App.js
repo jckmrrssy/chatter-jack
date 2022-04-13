@@ -4,6 +4,15 @@ import { connect, sendMessage } from './api'
 
 import Header from './components/Header'
 import History from './components/History'
+import ChatInput from './components/ChatInput'
+
+const send = async (event, setValue) => {
+  if (event.key === "Enter") {
+    await sendMessage(event.target.value)
+    setValue("")
+    event.target.value = ""
+  }
+}
 
 function App() {
   const [chatHistory, setChatHistory] = useState([])
@@ -14,19 +23,13 @@ function App() {
       setChatHistory([...chatHistory, msg])
     })
     console.log("Current chats are: ", chatHistory)
-  }, [chatHistory])
-
-
-  const send = () => {
-    console.log("sup, sending message")
-    sendMessage("suppppppppppp")
-  }  
-
+  })
+  
   return (
     <div className="App">
       <Header />
       <History chatHistory={chatHistory}/>
-      <button onClick={() => send()}>Websockey guy</button>
+      <ChatInput send={send}/>
     </div>
   )
 }
